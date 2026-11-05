@@ -18,7 +18,7 @@ describe.skipIf(process.env.RUN_DATABASE_TESTS !== "true")(
       const url = new URL(process.env.DATABASE_URL ?? "");
       expect(["localhost", "127.0.0.1"]).toContain(url.hostname);
       expect(url.pathname).toMatch(/^\/wikiteku_ci(?:_|$)/);
-    databaseVerified = true;
+      databaseVerified = true;
       let link = "";
       // Only the mail transport is captured; accounts, passwords and sessions use real Better Auth/PostgreSQL.
       const auth = betterAuth({
@@ -69,7 +69,7 @@ describe.skipIf(process.env.RUN_DATABASE_TESTS !== "true")(
       expect(row.rows[0].email_verified).toBe(true);
     });
     afterAll(async () => {
-    if (!databaseVerified) return;
+      if (!databaseVerified) return;
       await pool.query('delete from "user" where email=$1', [email]);
     });
   },
