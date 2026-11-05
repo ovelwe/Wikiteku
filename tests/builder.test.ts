@@ -9,6 +9,34 @@ import {
 } from "../src/lib/builder";
 
 describe("builder documents", () => {
+  it("keeps legacy themes compatible and validates article controls without allowing CSS", () => {
+    const {
+      article: _article,
+      backgroundFit: _backgroundFit,
+      ...legacy
+    } = defaultTheme;
+    expect(themeSchema.parse(legacy).article).toEqual(defaultTheme.article);
+    expect(themeSchema.parse(legacy).backgroundFit).toBe("cover");
+    const doc = makeTemplate("aurora", "Статья", "Описание");
+    doc.data.root.props.article = {
+      ...defaultTheme.article,
+      cover: "natural",
+      tags: "hide",
+      byline: "hide",
+      titleSize: 36,
+    };
+    expect(designSchema.parse(doc).data.root.props.article.tags).toBe("hide");
+    for (const article of [
+      { ...defaultTheme.article, titleSize: 900 },
+      { ...defaultTheme.article, cover: "url(javascript:alert(1))" },
+      { ...defaultTheme.article, style: "position:fixed" },
+    ]) {
+      const result = themeSchema.safeParse({ ...defaultTheme, article });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(describeDesignErrors(result.error)).toContain("Шапка статьи");
+    }
+  });
   it("accepts Puck insertion metadata and reports the exact invalid field", () => {
     const doc = makeTemplate("aurora", "Тест", "Описание");
     doc.data.zones = {};

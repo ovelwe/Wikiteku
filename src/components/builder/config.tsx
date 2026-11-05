@@ -12,6 +12,7 @@ import {
 import { MarkdownRenderer } from "@/lib/markdown";
 import "./canvas.css";
 import "./fonts.css";
+import { ArticleHeader, type ArticleHeaderData } from "./article-header";
 
 type Item = { label: string; value: string };
 type LinkItem = { label: string; href: string };
@@ -47,6 +48,19 @@ export type Blocks = {
   Timeline: { title: string; events: Item[] };
 };
 export type ArticleItem = { title: string; summary: string; href: string };
+export type BuilderArticle = {
+  markdown: string;
+  fandomSlug: string;
+  header?: ArticleHeaderData;
+};
+const visibilityField = (label: string) => ({
+  type: "radio" as const,
+  label,
+  options: [
+    { label: "Показывать", value: "show" },
+    { label: "Скрыть", value: "hide" },
+  ],
+});
 // Keep legacy selections visible instead of displaying the first new option.
 const compatibleFontOptions = [
   ...fontOptions,
@@ -87,7 +101,8 @@ function Media({ src, alt }: { src: string; alt: string }) {
 }
 export function createBuilderConfig(
   articles: ArticleItem[],
-  article?: { markdown: string; fandomSlug: string },
+  article?: BuilderArticle,
+  embedded = false,
 ): Config<Blocks, DesignTheme> {
   return {
     root: {
@@ -118,6 +133,50 @@ export function createBuilderConfig(
           label: "Цвет фона (#RRGGBB, пусто — из темы)",
         },
         backgroundImage: { ...textField, label: "Фоновое изображение (HTTPS)" },
+        backgroundFit: {
+          type: "select",
+          label: "Размещение фонового изображения",
+          options: [
+            { label: "Заполнить экран без повторов", value: "cover" },
+            { label: "Показать целиком без повторов", value: "contain" },
+            { label: "Исходный размер без повторов", value: "natural" },
+          ],
+        },
+        article: {
+          type: "object",
+          label: "Шапка и элементы статьи",
+          objectFields: {
+            titleSize: {
+              type: "number",
+              label: "Размер заголовка (px)",
+              min: 24,
+              max: 72,
+            },
+            cover: {
+              type: "select",
+              label: "Обложка",
+              options: [
+                { label: "Целиком", value: "contain" },
+                { label: "Заполнить с обрезкой", value: "cover" },
+                { label: "Исходный размер", value: "natural" },
+                { label: "Скрыть", value: "hidden" },
+              ],
+            },
+            coverHeight: {
+              type: "number",
+              label: "Максимальная высота обложки (px)",
+              min: 120,
+              max: 600,
+            },
+            byline: visibilityField("Автор и дата правки"),
+            categories: visibilityField("Категории"),
+            tags: visibilityField("Теги"),
+            summary: visibilityField("Описание"),
+            divider: visibilityField("Разделитель после шапки"),
+            contents: visibilityField("Оглавление"),
+            related: visibilityField("Связанные статьи и обратные ссылки"),
+          },
+        },
         surface: { ...textField, label: "Цвет карточек" },
         foreground: { ...textField, label: "Цвет заголовков" },
         muted: { ...textField, label: "Цвет текста" },
@@ -149,9 +208,22 @@ export function createBuilderConfig(
           ],
         },
       },
-      render: ({ children, ...theme }) => (
-        <CanvasTheme theme={theme}>{children}</CanvasTheme>
-      ),
+      render: ({ children, ...theme }) =>
+        embedded ? (
+          // biome-ignore lint/complexity/noUselessFragments: Puck requires a ReactElement from the root renderer.
+          <>{children}</>
+        ) : (
+          <CanvasTheme theme={theme} articlePage={!!article}>
+            {article?.header && (
+              <ArticleHeader
+                page={article.header}
+                theme={theme}
+                fandomSlug={article.fandomSlug}
+              />
+            )}
+            {children}
+          </CanvasTheme>
+        ),
     },
     categories: {
       layout: {
@@ -605,9 +677,13 @@ export function createBuilderConfig(
 export function CanvasTheme({
   theme,
   children,
+  showBackground = true,
+  articlePage = false,
 }: {
   theme: DesignTheme;
   children: React.ReactNode;
+  showBackground?: boolean;
+  articlePage?: boolean;
 }) {
   const overrides: Record<string, string> = {};
   for (const [key, value] of Object.entries({
@@ -621,11 +697,17 @@ export function CanvasTheme({
       overrides[`--canvas-${key}`] = value;
   const style = {
     ...overrides,
-    ...(theme.backgroundImage && safeDesignUrl(theme.backgroundImage, true)
+    ...(showBackground &&
+    theme.backgroundImage &&
+    safeDesignUrl(theme.backgroundImage, true)
       ? {
           backgroundImage: `url(${JSON.stringify(theme.backgroundImage)})`,
-          backgroundSize: "cover",
+          backgroundSize:
+            theme.backgroundFit === "natural"
+              ? "auto"
+              : (theme.backgroundFit ?? "cover"),
           backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }
       : {}),
     "--canvas-heading-font": fontFamilies[theme.headingFont],
@@ -639,10 +721,11 @@ export function CanvasTheme({
   } as CSSProperties;
   return (
     <div
-      className="fandom-canvas"
+      className={`fandom-canvas${articlePage ? " article-canvas" : ""}`}
       data-preset={theme.preset}
       data-texture={theme.texture}
       data-motion={theme.motion}
+      data-contents={theme.article?.contents ?? "show"}
       style={style}
     >
       <div className="canvas-inner">{children}</div>
@@ -653,36 +736,53 @@ export function DesignRenderer({
   document,
   articles,
   article,
+  embedded = false,
 }: {
   document: DesignDocument;
   articles: ArticleItem[];
-  article?: { markdown: string; fandomSlug: string };
+  article?: BuilderArticle;
+  embedded?: boolean;
 }) {
+  const rendered = (
+    <Render
+      config={createBuilderConfig(articles, article, true)}
+      data={document.data as Data<Blocks, DesignTheme>}
+    />
+  );
+  if (embedded) return rendered;
   return (
     <div className="published-world">
-      <div
-        className="world-backdrop"
-        aria-hidden="true"
-        style={{
-          backgroundColor:
-            document.data.root.props.background ||
-            {
-              aurora: "#111216",
-              archive: "#f4f0e8",
-              terminal: "#111b18",
-              gothic: "#1b1825",
-            }[document.data.root.props.preset],
-          backgroundImage:
-            document.data.root.props.backgroundImage &&
-            safeDesignUrl(document.data.root.props.backgroundImage, true)
-              ? `url(${JSON.stringify(document.data.root.props.backgroundImage)})`
-              : undefined,
-        }}
-      />
-      <Render
-        config={createBuilderConfig(articles, article)}
-        data={document.data as Data<Blocks, DesignTheme>}
-      />
+      <WorldBackdrop theme={document.data.root.props} />
+      <CanvasTheme theme={document.data.root.props} showBackground={false}>
+        {rendered}
+      </CanvasTheme>
     </div>
+  );
+}
+
+export function WorldBackdrop({ theme }: { theme: DesignTheme }) {
+  return (
+    <div
+      className="world-backdrop"
+      aria-hidden="true"
+      style={{
+        backgroundColor:
+          theme.background ||
+          {
+            aurora: "#111216",
+            archive: "#f4f0e8",
+            terminal: "#111b18",
+            gothic: "#1b1825",
+          }[theme.preset],
+        backgroundImage:
+          theme.backgroundImage && safeDesignUrl(theme.backgroundImage, true)
+            ? `url(${JSON.stringify(theme.backgroundImage)})`
+            : undefined,
+        backgroundSize:
+          theme.backgroundFit === "natural"
+            ? "auto"
+            : (theme.backgroundFit ?? "cover"),
+      }}
+    />
   );
 }

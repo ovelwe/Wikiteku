@@ -62,6 +62,7 @@ test("login, create, publish, edit and reload through the browser", async ({
   await expect(
     page.getByRole("heading", { name: "Сохранённый текст", exact: true }),
   ).toBeVisible();
+  await page.locator(".wiki-tools-menu summary").click();
   await page.getByRole("link", { name: "Редактировать", exact: true }).click();
   await expect(page).toHaveURL(/\/pages\/[^/]+\/edit$/);
   const editURL = page.url();
@@ -76,6 +77,89 @@ test("login, create, publish, edit and reload through the browser", async ({
   await expect(
     page.getByText("Вторая версия Chromium.", { exact: true }),
   ).toBeVisible();
+  // The header and body must share one themed canvas after publishing a custom layout.
+  await page.locator(".wiki-tools-menu summary").click();
+  await page.getByRole("link", { name: /Оформление статьи/ }).click();
+  await page.locator('input[name="article.titleSize"]:visible').fill("36");
+  await page.locator('input[name="article.titleSize"]:visible').blur();
+  await page
+    .locator('input[name="article.byline"][value=\'{"value":"hide"}\']:visible')
+    .locator("..")
+    .click();
+  await page
+    .getByRole("combobox", { name: "Шрифт заголовков", exact: true })
+    .selectOption({ label: "Press Start 2P · Пиксельный" });
+  await page
+    .locator('input[name="backgroundImage"]:visible')
+    .fill("https://fixture.example/small.png");
+  await page.locator('input[name="backgroundImage"]:visible').blur();
+  const preview = page.frameLocator("iframe");
+  await expect(preview.locator(".wiki-byline")).toHaveCount(0);
+  const source = await page
+    .getByText("Разделитель", { exact: true })
+    .first()
+    .boundingBox();
+  const target = await preview
+    .locator("[data-puck-dropzone]")
+    .first()
+    .boundingBox();
+  expect(source).toBeTruthy();
+  expect(target).toBeTruthy();
+  if (!source || !target) throw new Error("Studio drag targets missing");
+  await page.mouse.move(
+    source.x + source.width / 2,
+    source.y + source.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    target.x + target.width / 2,
+    target.y + target.height - 10,
+    { steps: 30 },
+  );
+  await page.waitForTimeout(400);
+  await page.mouse.up();
+  await expect(preview.locator(".canvas-divider")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Сохранить черновик", exact: true })
+    .click();
+  await expect(page.locator(".studio-status")).toContainText(
+    "Черновик 1 сохранён",
+  );
+  await page.reload();
+  await expect(
+    page.locator('input[name="article.titleSize"]:visible'),
+  ).toHaveValue("36");
+  await expect(
+    page.frameLocator("iframe").locator(".canvas-divider"),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: "Опубликовать", exact: true }).click();
+  await expect(page.locator(".studio-status")).toContainText(
+    "Версия 2 опубликована",
+  );
+  await page.goto(`/f/${slug}/wiki/browser-article`);
+  await expect(page.locator(".wiki-header h1")).toHaveCSS("font-size", "36px");
+  await expect(page.locator(".wiki-byline")).toHaveCount(0);
+  await expect(page.locator(".world-backdrop")).toHaveCount(1);
+  await expect(page.locator(".world-backdrop")).toHaveCSS(
+    "background-repeat",
+    "no-repeat",
+  );
+  await expect(page.locator(".fandom-canvas")).toHaveCount(1);
+  await expect(page.locator(".fandom-canvas")).toHaveCSS(
+    "background-image",
+    "none",
+  );
+  expect(
+    parseFloat(
+      await page
+        .locator(".article-markdown h1")
+        .evaluate((el) => getComputedStyle(el).fontSize),
+    ),
+  ).toBeLessThanOrEqual(38);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
   const anonymous = await browser.newContext({ baseURL: base.origin });
   try {
     const guest = await anonymous.newPage();

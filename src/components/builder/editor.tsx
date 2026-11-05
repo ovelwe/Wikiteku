@@ -11,9 +11,15 @@ import {
   fontFamilies,
   fontOptions,
   makeTemplate,
+  themeSchema,
 } from "@/lib/builder";
 import { studioRu } from "@/lib/studio-ru";
-import { type ArticleItem, type Blocks, createBuilderConfig } from "./config";
+import {
+  type ArticleItem,
+  type Blocks,
+  type BuilderArticle,
+  createBuilderConfig,
+} from "./config";
 
 type Version = {
   revision: number;
@@ -37,9 +43,18 @@ export function DesignEditor({
   revision: number;
   history: Version[];
   articles: ArticleItem[];
-  article?: { id: string; slug: string; markdown: string; fandomSlug: string };
+  article?: BuilderArticle & { id: string; slug: string };
 }) {
-  const [data, setData] = useState(initial.data as Data<Blocks, DesignTheme>);
+  const [data, setData] = useState(
+    () =>
+      ({
+        ...initial.data,
+        root: {
+          ...initial.data.root,
+          props: themeSchema.parse(initial.data.root.props),
+        },
+      }) as Data<Blocks, DesignTheme>,
+  );
   const [revision, setRevision] = useState(initialRevision);
   const [history, setHistory] = useState(initialHistory);
   const [generation, setGeneration] = useState(0);
@@ -79,6 +94,16 @@ export function DesignEditor({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   function replace(document: DesignDocument) {
+    document = {
+      ...document,
+      data: {
+        ...document.data,
+        root: {
+          ...document.data.root,
+          props: themeSchema.parse(document.data.root.props),
+        },
+      },
+    };
     latestData.current = document.data as Data<Blocks, DesignTheme>;
     setData(document.data as Data<Blocks, DesignTheme>);
     setGeneration((value) => value + 1);

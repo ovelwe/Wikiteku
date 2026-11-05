@@ -95,6 +95,20 @@ const colorOverride = z
   .string()
   .regex(/^(#[0-9a-fA-F]{6})?$/)
   .default("");
+export const articleAppearanceSchema = z
+  .object({
+    titleSize: z.number().int().min(24).max(72).default(44),
+    cover: z.enum(["contain", "cover", "natural", "hidden"]).default("contain"),
+    coverHeight: z.number().int().min(120).max(600).default(360),
+    byline: z.enum(["show", "hide"]).default("show"),
+    categories: z.enum(["show", "hide"]).default("show"),
+    tags: z.enum(["show", "hide"]).default("show"),
+    summary: z.enum(["show", "hide"]).default("show"),
+    divider: z.enum(["show", "hide"]).default("show"),
+    contents: z.enum(["show", "hide"]).default("show"),
+    related: z.enum(["show", "hide"]).default("show"),
+  })
+  .strict();
 export const themeSchema = z
   .object({
     preset: z.enum(["aurora", "archive", "terminal", "gothic"]),
@@ -103,6 +117,8 @@ export const themeSchema = z
     headingFont: z.enum(fontNames).default("sans"),
     background: colorOverride,
     backgroundImage: imageUrl.default(""),
+    backgroundFit: z.enum(["cover", "contain", "natural"]).default("cover"),
+    article: articleAppearanceSchema.prefault({}),
     surface: colorOverride,
     foreground: colorOverride,
     muted: colorOverride,
@@ -122,6 +138,8 @@ export const defaultTheme: DesignTheme = {
   headingFont: "manrope",
   background: "",
   backgroundImage: "",
+  backgroundFit: "cover",
+  article: articleAppearanceSchema.parse({}),
   surface: "",
   foreground: "",
   muted: "",
@@ -252,6 +270,18 @@ export function describeDesignErrors(error: z.ZodError): string {
   const labels: Record<string, string> = {
     root: "Тема страницы",
     background: "Фон",
+    backgroundFit: "Размещение фона",
+    article: "Шапка статьи",
+    titleSize: "Размер заголовка",
+    cover: "Обложка",
+    coverHeight: "Высота обложки",
+    byline: "Автор и дата",
+    categories: "Категории",
+    tags: "Теги",
+    summary: "Описание",
+    divider: "Разделитель",
+    contents: "Оглавление",
+    related: "Связанные статьи",
     accent: "Акцент",
     href: "Ссылка",
     src: "Изображение",

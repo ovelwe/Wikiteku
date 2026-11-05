@@ -13,8 +13,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { changePage } from "@/app/wiki-actions";
-import { CanvasTheme, DesignRenderer } from "@/components/builder/config";
-import { defaultTheme, safeDesignUrl } from "@/lib/builder";
+import { ArticleHeader } from "@/components/builder/article-header";
+import {
+  CanvasTheme,
+  DesignRenderer,
+  WorldBackdrop,
+} from "@/components/builder/config";
+import { defaultTheme } from "@/lib/builder";
 import { db } from "@/lib/db";
 import { pageRevisions, pages, user } from "@/lib/db/schema";
 import { MarkdownRenderer } from "@/lib/markdown";
@@ -129,102 +134,92 @@ export default async function WikiPage({
     design?.published?.data.root.props ??
     defaultTheme;
   return (
-    <div className="stack">
-      <div className="page-actions">
-        <Link href={`/f/${slug}`}>← {fandom.title}</Link>
-        {page.status === "published" && (
-          <Link
-            className="button small"
-            href={`/f/${slug}/pages/${page.id}/translation`}
-          >
-            {translationLabels.title}
-          </Link>
-        )}
-        {page.status === "published" && (
-          <Link href={`/f/${slug}/pages/${page.id}/report`}>
-            {locale === "en" ? "Report" : "Пожаловаться"}
-          </Link>
-        )}
-        {canEditContent(role) && (
-          <Link
-            className="button small"
-            href={`/f/${slug}/pages/${page.id}/edit`}
-          >
-            {labels.edit}
-          </Link>
-        )}
-      </div>
-      {canEditContent(role) && (
-        <div className="wiki-tools">
-          <Link href={`/f/${slug}/pages/${page.id}/design`}>
-            ✦ {labels.articleDesign}
-          </Link>
-          <Link href={`/f/${slug}/pages/${page.id}/history`}>
-            {labels.historyRestore}
-          </Link>
-          <Link href={`/f/${slug}/media`}>{labels.media}</Link>
-          {appearance?.published && (
-            <form action={changePage.bind(null, slug, page.id)}>
-              <input type="hidden" name="expected" value={page.revision} />
-              <input type="hidden" name="version" value={appearance.revision} />
-              <input type="hidden" name="action" value="inherit" />
-              <button type="submit">{labels.inheritTheme}</button>
-            </form>
-          )}
-        </div>
-      )}
-      <CanvasTheme theme={theme}>
-        <article className="canvas-block">
-          <span className="eyebrow">
-            {page.status === "draft" ? labels.draft : labels.article} ·{" "}
-            {labels.version} {page.revision}
-          </span>
-          <h1>{page.title}</h1>
-          {page.cover && safeDesignUrl(page.cover, true) && (
-            // biome-ignore lint/performance/noImgElement: Authenticated user media is rendered without a proxy.
-            <img
-              className="wiki-cover"
-              src={page.cover}
-              alt={page.title}
-              referrerPolicy="no-referrer"
-            />
-          )}
-          <p className="wiki-byline">
-            {labels.author}:{" "}
-            {author[0]?.username ? (
-              <Link href={`/u/${author[0].username}`}>{author[0].name}</Link>
-            ) : (
-              author[0]?.name
-            )}
-            . {labels.lastEdit}: {editors[0]?.name ?? author[0]?.name} ·{" "}
-            {page.updatedAt.toLocaleString(locale)}
-          </p>
-          <div className="tag-list">
-            {page.categories.map((category) => (
+    <div className="published-world wiki-page">
+      <WorldBackdrop theme={theme} />
+      <nav
+        className="wiki-toolbar"
+        aria-label={locale === "en" ? "Article navigation" : "Навигация статьи"}
+      >
+        <div className="wiki-toolbar-inner">
+          <div className="page-actions">
+            <Link href={`/f/${slug}`}>← {fandom.title}</Link>
+            {page.status === "published" && (
               <Link
                 className="button small"
-                key={category}
-                href={`/f/${slug}/library?category=${encodeURIComponent(category)}`}
+                href={`/f/${slug}/pages/${page.id}/translation`}
               >
-                {category}
+                {translationLabels.title}
               </Link>
-            ))}
-          </div>
-          <div className="tag-list">
-            {page.tags.map((tag) => (
-              <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`}>
-                #{tag}{" "}
+            )}
+            {page.status === "published" && (
+              <Link href={`/f/${slug}/pages/${page.id}/report`}>
+                {locale === "en" ? "Report" : "Пожаловаться"}
               </Link>
-            ))}
+            )}
           </div>
-          {page.summary && <p className="muted">{page.summary}</p>}
-          <hr
-            style={{
-              border: 0,
-              borderTop: "1px solid var(--border)",
-              margin: "20px 0",
-            }}
-          />
+          {canEditContent(role) && (
+            <details className="wiki-tools-menu">
+              <summary>
+                {locale === "en" ? "Manage article" : "Управление статьёй"}
+              </summary>
+              <div className="wiki-tools">
+                <Link href={`/f/${slug}/pages/${page.id}/edit`}>
+                  {labels.edit}
+                </Link>
+                <Link href={`/f/${slug}/pages/${page.id}/design`}>
+                  ✦ {labels.articleDesign}
+                </Link>
+                <Link href={`/f/${slug}/pages/${page.id}/history`}>
+                  {labels.historyRestore}
+                </Link>
+                <Link href={`/f/${slug}/media`}>{labels.media}</Link>
+                {appearance?.published && (
+                  <form action={changePage.bind(null, slug, page.id)}>
+                    <input
+                      type="hidden"
+                      name="expected"
+                      value={page.revision}
+                    />
+                    <input
+                      type="hidden"
+                      name="version"
+                      value={appearance.revision}
+                    />
+                    <input type="hidden" name="action" value="inherit" />
+                    <button type="submit">{labels.inheritTheme}</button>
+                  </form>
+                )}
+              </div>
+            </details>
+          )}
+        </div>
+      </nav>
+      <CanvasTheme theme={theme} showBackground={false} articlePage>
+        <ArticleHeader
+          page={page}
+          theme={theme}
+          fandomSlug={slug}
+          locale={locale}
+          eyebrow={
+            <>
+              {page.status === "draft" ? labels.draft : labels.article} ·{" "}
+              {labels.version} {page.revision}
+            </>
+          }
+          byline={
+            <>
+              {labels.author}:{" "}
+              {author[0]?.username ? (
+                <Link href={`/u/${author[0].username}`}>{author[0].name}</Link>
+              ) : (
+                author[0]?.name
+              )}
+              . {labels.lastEdit}: {editors[0]?.name ?? author[0]?.name} ·{" "}
+              {page.updatedAt.toLocaleString(locale)}
+            </>
+          }
+        />
+        <article className="wiki-body">
           {!appearance?.published && (
             <MarkdownRenderer
               markdown={page.markdown}
@@ -234,30 +229,33 @@ export default async function WikiPage({
             />
           )}
         </article>
-      </CanvasTheme>
-      {appearance?.published && (
-        <DesignRenderer
-          document={appearance.published}
-          articles={[]}
-          article={{ markdown: page.markdown, fandomSlug: slug }}
-        />
-      )}
-      <div className="content-grid">
-        {[
-          { title: labels.related, items: related },
-          { title: labels.backlinks, items: backlinks },
-        ].map(({ title, items }) => (
-          <section className="panel stack" key={title}>
-            <h2>{title}</h2>
-            {items.map((item) => (
-              <Link key={item.slug} href={`/f/${slug}/wiki/${item.slug}`}>
-                {item.title} →
-              </Link>
+        {appearance?.published && (
+          <DesignRenderer
+            document={appearance.published}
+            articles={[]}
+            article={{ markdown: page.markdown, fandomSlug: slug }}
+            embedded
+          />
+        )}
+        {(theme.article?.related ?? "show") === "show" && (
+          <div className="wiki-relations">
+            {[
+              { title: labels.related, items: related },
+              { title: labels.backlinks, items: backlinks },
+            ].map(({ title, items }) => (
+              <section className="wiki-relation-card" key={title}>
+                <h2>{title}</h2>
+                {items.map((item) => (
+                  <Link key={item.slug} href={`/f/${slug}/wiki/${item.slug}`}>
+                    {item.title} →
+                  </Link>
+                ))}
+                {!items.length && <p>{labels.noMaterials}</p>}
+              </section>
             ))}
-            {!items.length && <p>{labels.noMaterials}</p>}
-          </section>
-        ))}
-      </div>
+          </div>
+        )}
+      </CanvasTheme>
     </div>
   );
 }

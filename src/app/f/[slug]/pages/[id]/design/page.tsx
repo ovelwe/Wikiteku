@@ -64,6 +64,13 @@ export default async function Page({
         slug: page.slug,
         markdown: page.markdown,
         fandomSlug: slug,
+        header: {
+          title: page.title,
+          cover: page.cover,
+          summary: page.summary,
+          categories: page.categories,
+          tags: page.tags,
+        },
       }}
     />
   );
