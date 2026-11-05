@@ -6,7 +6,16 @@ import { boundedBody, sameOrigin } from "@/server/request";
 const handler = toNextJsHandler(auth);
 export const GET = handler.GET;
 export async function POST(request: Request) {
-  if (new URL(request.url).pathname.endsWith("/sign-up/email")) {
+  let path: string;
+  try {
+    path = decodeURIComponent(new URL(request.url).pathname).replace(
+      /\/+$/,
+      "",
+    );
+  } catch {
+    return Response.json({ code: "INVALID_REQUEST" }, { status: 400 });
+  }
+  if (path.endsWith("/sign-up/email")) {
     const registration = registrationState(process.env);
     if (!registration.open)
       return Response.json(

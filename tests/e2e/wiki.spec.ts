@@ -9,9 +9,9 @@ test.afterEach(async ({ page }, info) => {
       (
         await page
           .locator("main")
-          .innerText()
+          .textContent()
           .catch(() => "")
-      ).slice(0, 4000),
+      )?.slice(0, 4000),
     );
   }
 });
