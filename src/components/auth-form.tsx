@@ -80,15 +80,17 @@ export function AuthForm({
     >
       {mode === "register" && (
         <>
-          <label className="signup-honeypot" aria-hidden="true">
-            Website
-            <input
-              name="website"
-              type="text"
-              tabIndex={-1}
-              autoComplete="off"
-            />
-          </label>
+          <div hidden style={{ display: "none" }} aria-hidden="true">
+            <label>
+              {locale === "en" ? "Website" : "Сайт"}
+              <input
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </label>
+          </div>
           <label>
             {t.name}
             <input

@@ -42,9 +42,6 @@ body {
 .skip-link:focus {
   transform: translateY(0);
 }
-.signup-honeypot {
-  display: none;
-}
 h1,
 h2,
 h3,
