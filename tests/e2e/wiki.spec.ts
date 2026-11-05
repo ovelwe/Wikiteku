@@ -1,6 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
+test.afterEach(async ({ page }, info) => {
+  if (info.status !== info.expectedStatus) {
+    console.log("Browser failure URL:", page.url());
+    console.log(
+      "Visible content:",
+      (
+        await page
+          .locator("main")
+          .innerText()
+          .catch(() => "")
+      ).slice(0, 4000),
+    );
+  }
+});
+
 test("login, create, publish, edit and reload through the browser", async ({
   page,
   browser,
@@ -35,7 +50,7 @@ test("login, create, publish, edit and reload through the browser", async ({
     .fill("Статья Chromium");
   await page.getByLabel("Адрес", { exact: true }).fill("browser-article");
   await page
-    .getByLabel("Текст Markdown", { exact: true })
+    .getByRole("textbox", { name: "Текст Markdown", exact: true })
     .fill("# Сохранённый текст\n\nПервая версия.");
   await page
     .getByRole("combobox", { name: "Статус", exact: true })
@@ -48,13 +63,15 @@ test("login, create, publish, edit and reload through the browser", async ({
     page.getByRole("heading", { name: "Сохранённый текст", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Редактировать", exact: true }).click();
+  await expect(page).toHaveURL(/\/pages\/[^/]+\/edit$/);
   const editURL = page.url();
   await page
-    .getByLabel("Текст Markdown", { exact: true })
+    .getByRole("textbox", { name: "Текст Markdown", exact: true })
     .fill("# Сохранённый текст\n\nВторая версия Chromium.");
   await page
     .getByRole("button", { name: "Сохранить изменения", exact: true })
     .click();
+  await expect(page).toHaveURL(new RegExp(`/f/${slug}/wiki/browser-article$`));
   await page.reload();
   await expect(
     page.getByText("Вторая версия Chromium.", { exact: true }),
