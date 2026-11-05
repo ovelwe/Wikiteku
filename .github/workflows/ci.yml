@@ -9,12 +9,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 30
     services:
       postgres:
@@ -31,7 +32,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgres://wikiteku:wikiteku@127.0.0.1:5432/wikiteku_ci
+      DATABASE_URL: postgres://wikiteku:wikiteku@postgres:5432/wikiteku_ci
       RUN_DATABASE_TESTS: "true"
       SMOKE_CI_PASSWORD: ci-isolated-account-only-20261105
       BETTER_AUTH_URL: http://localhost:3000
@@ -52,7 +53,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm audit --prod
-      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm exec playwright install --list
       - run: pnpm build --webpack
       - name: Verify production server
         shell: bash

@@ -16,7 +16,11 @@ describe.skipIf(process.env.RUN_DATABASE_TESTS !== "true")(
   () => {
     it("withholds a session until the signed email link is verified", async () => {
       const url = new URL(process.env.DATABASE_URL ?? "");
-      expect(["localhost", "127.0.0.1"]).toContain(url.hostname);
+      expect([
+        "localhost",
+        "127.0.0.1",
+        ...(process.env.CI === "true" ? ["postgres"] : []),
+      ]).toContain(url.hostname);
       expect(url.pathname).toMatch(/^\/wikiteku_ci(?:_|$)/);
       databaseVerified = true;
       let link = "";

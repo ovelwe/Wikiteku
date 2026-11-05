@@ -18,7 +18,11 @@ describe.skipIf(!enabled)("transactional permissions on PostgreSQL", () => {
   beforeAll(async () => {
     const url = new URL(process.env.DATABASE_URL ?? "");
     if (
-      !["localhost", "127.0.0.1"].includes(url.hostname) ||
+      ![
+        "localhost",
+        "127.0.0.1",
+        ...(process.env.CI === "true" ? ["postgres"] : []),
+      ].includes(url.hostname) ||
       !/^\/wikiteku_ci(?:_|$)/.test(url.pathname)
     )
       throw new Error(
