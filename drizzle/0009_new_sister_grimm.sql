@@ -1,0 +1,3 @@
+CREATE INDEX "fandoms_public_updated_idx" ON "fandoms" USING btree ("updated_at") WHERE "fandoms"."visibility" = 'public';--> statement-breakpoint
+CREATE INDEX "pages_fandom_published_updated_idx" ON "pages" USING btree ("fandom_id","updated_at") WHERE "pages"."status" = 'published' and "pages"."deleted_at" is null and "pages"."blocked_at" is null;--> statement-breakpoint
+CREATE INDEX "pages_author_updated_idx" ON "pages" USING btree ("author_id","updated_at");

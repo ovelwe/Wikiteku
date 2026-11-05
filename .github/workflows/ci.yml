@@ -1,0 +1,74 @@
+name: Quality and production smoke
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: wikiteku
+          POSTGRES_PASSWORD: wikiteku
+          POSTGRES_DB: wikiteku_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wikiteku -d wikiteku_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://wikiteku:wikiteku@127.0.0.1:5432/wikiteku_ci
+      RUN_DATABASE_TESTS: "true"
+      SMOKE_CI_PASSWORD: ci-isolated-account-only-20261105
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-not-a-deployment-secret-0123456789abcdef
+      TRANSLATION_PROVIDER: none
+      PLATFORM_MODERATOR_IDS: ""
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@v3
+        with:
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+      - run: pnpm db:migrate
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm audit --prod
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build --webpack
+      - name: Verify production server
+        shell: bash
+        run: |
+          pnpm start > /tmp/wikiteku-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; cat /tmp/wikiteku-server.log' EXIT
+          ready=false
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:3000/login > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true
+          node scripts/check-security.mjs
+          node scripts/check-e2e.mjs --setup
+          pnpm exec playwright test
