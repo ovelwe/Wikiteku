@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17
@@ -52,7 +52,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm audit --prod
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm build --webpack
       - name: Verify production server
         shell: bash

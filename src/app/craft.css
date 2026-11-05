@@ -89,7 +89,7 @@ h3,
 .button:focus-visible,
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--link);
   outline-offset: 4px;
 }
 .craft-hero {
@@ -281,7 +281,8 @@ button:focus-visible {
   font-size: 12px;
   letter-spacing: 0.12em;
   margin: 12px 0;
-  opacity: 0.65;
+  opacity: 1;
+  font-weight: 600;
 }
 .showcase-type h2 {
   font-size: 27px;
@@ -320,6 +321,13 @@ button:focus-visible {
 }
 .manifesto-strip span {
   color: var(--muted);
+  opacity: 1;
+  font-size: 11px;
+  font-weight: 600;
+}
+.empty a:not(.button) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .studio-teaser {
   background: var(--surface);

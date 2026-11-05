@@ -25,7 +25,14 @@ export const getPage = cache(async function getPage(
 
 export async function listPages(fandomId: string, includeDrafts = false) {
   return db
-    .select()
+    .select({
+      id: pages.id,
+      slug: pages.slug,
+      title: pages.title,
+      summary: pages.summary,
+      status: pages.status,
+      updatedAt: pages.updatedAt,
+    })
     .from(pages)
     .where(
       and(

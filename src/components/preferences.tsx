@@ -30,7 +30,9 @@ export function Preferences({
       <button
         type="button"
         onClick={() => set("locale", locale === "ru" ? "en" : "ru")}
-        aria-label={locale === "ru" ? "Сменить язык" : "Change language"}
+        aria-label={
+          locale === "ru" ? "RU · Сменить язык" : "EN · Change language"
+        }
         title={locale === "ru" ? "Сменить язык" : "Change language"}
       >
         {locale.toUpperCase()}

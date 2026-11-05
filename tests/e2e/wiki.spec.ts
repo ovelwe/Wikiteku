@@ -37,7 +37,9 @@ test("login, create, publish, edit and reload through the browser", async ({
   await page
     .getByLabel("Текст Markdown", { exact: true })
     .fill("# Сохранённый текст\n\nПервая версия.");
-  await page.getByLabel("Статус", { exact: true }).selectOption("published");
+  await page
+    .getByRole("combobox", { name: "Статус", exact: true })
+    .selectOption("published");
   await page
     .getByRole("button", { name: "Сохранить статью", exact: true })
     .click();
